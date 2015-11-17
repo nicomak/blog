@@ -19,7 +19,7 @@ import java.util.regex.Pattern;
  * @author Nicolas Di Tullio
  *
  */
-public class WordCount {
+public class MultithreadedWordCount {
 
 	/** Create thread-safe blocking queue which will store up to 1k lines. */
 	private static BlockingQueue<String> sharedQueue = new LinkedBlockingQueue<>(1000);
