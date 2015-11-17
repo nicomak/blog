@@ -81,8 +81,8 @@ public class MultithreadedWordCount {
 		System.out.printf("Word Counting took %d ms.\n", System.currentTimeMillis() - executionStartTime);
 		System.out.printf("Now ordering results ...\n");
 		
-		// Create an ordered map of the results
-		Map<String, Integer> ordered = new TreeMap<String, Integer>(wordCounts);
+		// Uncomment to order the map of the results
+		// wordCounts = new TreeMap<String, Integer>(wordCounts);
 		
 		// Print results
 		try 
@@ -90,7 +90,7 @@ public class MultithreadedWordCount {
 			FileWriter fstream = new FileWriter(outputFile);
 			BufferedWriter out = new BufferedWriter(fstream);
 		) {
-			for (Entry<String, Integer> entry : ordered.entrySet()) {
+			for (Entry<String, Integer> entry : wordCounts.entrySet()) {
 				out.write(String.format("%s %s\n", entry.getKey(), entry.getValue()));
 			}
 		} catch (IOException e) {
