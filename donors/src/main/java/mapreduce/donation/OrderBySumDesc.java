@@ -20,7 +20,7 @@ public class OrderBySumDesc {
 	public static class InverseCitySumMapper extends Mapper<Text, Text, FloatWritable, Text> {
 
 		private FloatWritable floatSum = new FloatWritable();		
-		
+
 		@Override
 		public void map(Text city, Text sum, Context context) throws IOException, InterruptedException {
 			float floatVal = Float.parseFloat(sum.toString());
@@ -28,43 +28,43 @@ public class OrderBySumDesc {
 			context.write(floatSum, city);
 		}
 	}
-	
-	public static class DescendingFloatComparator extends WritableComparator {
-		
-	    public DescendingFloatComparator() {
-	        super(FloatWritable.class, true);
-	    }
 
-	    @SuppressWarnings("rawtypes")
+	public static class DescendingFloatComparator extends WritableComparator {
+
+		public DescendingFloatComparator() {
+			super(FloatWritable.class, true);
+		}
+
+		@SuppressWarnings("rawtypes")
 		@Override
-	    public int compare(WritableComparable w1, WritableComparable w2) {
-	    	FloatWritable key1 = (FloatWritable) w1;
-	    	FloatWritable key2 = (FloatWritable) w2;          
-	        return -1 * key1.compareTo(key2);
-	    }
+		public int compare(WritableComparable w1, WritableComparable w2) {
+			FloatWritable key1 = (FloatWritable) w1;
+			FloatWritable key2 = (FloatWritable) w2;          
+			return -1 * key1.compareTo(key2);
+		}
 	}
-	
+
 	public static void main(String[] args) throws Exception {
-		
+
 		Job job = Job.getInstance(new Configuration(), "Order By Sum Desc");
 		job.setJarByClass(DonationsSumByCity.class);
-		
+
 		// The mapper which transforms (K:V) => (float(V):K)
 		job.setMapperClass(InverseCitySumMapper.class);
 		job.setInputFormatClass(KeyValueTextInputFormat.class);
 		job.setMapOutputKeyClass(FloatWritable.class);
 		job.setMapOutputValueClass(Text.class);
-		
+
 		// Sort with descending float order
 		job.setSortComparatorClass(DescendingFloatComparator.class);
-		
+
 		// Use default Reducer which simply transforms (K:V1,V2) => (K:V1), (K:V2)
 		job.setReducerClass(Reducer.class);
 		job.setNumReduceTasks(1);
-		
-	    FileInputFormat.setInputPaths(job, new Path(args[0]));
-	    FileOutputFormat.setOutputPath(job, new Path(args[1]));
+
+		FileInputFormat.setInputPaths(job, new Path(args[0]));
+		FileOutputFormat.setOutputPath(job, new Path(args[1]));
 		System.exit(job.waitForCompletion(true) ? 0 : 1);
-		
+
 	}
 }
