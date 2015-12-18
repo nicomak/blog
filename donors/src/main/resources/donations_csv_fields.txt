@@ -1,0 +1,26 @@
+Donations
+---------
+
+0  donation_id
+1  project_id
+2  donor_id
+3  cart_id
+4  donor_city
+5  donor_state
+6  donor_zip
+7  donor_is_teacher
+8  date
+9  donation_amount
+10 donation_optional_support
+11 donation_total
+12 donation_category
+13 included_optional_support
+14 payment_method
+15 payment_inc_acct_credit
+16 payment_inc_campaign_gift_card
+17 payment_inc_web_gift_card
+18 payment_promo_matched
+19 via_giving_page
+20 for_honoree
+21 thank_you_packet
+22 message

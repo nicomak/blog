@@ -1,0 +1,47 @@
+Projects
+---------
+
+0  project_id
+1  teacher_acctid
+2  school_id
+3  school_nces_id
+4  school_latitude
+5  school_longitude
+6  school_city
+7  school_state
+8  school_zip
+9  school_metro
+10 school_district
+11 school_country
+12 school_charter
+13 school_magnet
+14 school_year_round
+15 school_nlns
+16 school_kipp
+17 school_charter_ready_promise
+18 teacher_prefix
+19 teacher_teach_for_america
+20 teacher_ny_teaching_fellow
+21 primary_focus_subject
+22 primary_focus_area
+23 secondary_focus_subject
+24 secondary_focus_area
+25 resource_type
+26 poverty_level
+27 grade_level
+28 vendor_shipping_charges
+29 sales_tax
+30 payment_processing_charges
+31 fulfillment_labor_materials
+32 total_price_excluding_optional_support
+33 total_price_including_optional_support
+34 students_reached
+35 total_donations
+36 num_donors
+37 eligible_double_your_impact_match
+38 eligible_almost_home_match
+39 funding_status
+40 date_posted
+41 date_completed
+42 date_thank_you_packet_mailed
+43 date_expiration
