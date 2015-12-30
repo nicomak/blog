@@ -16,23 +16,22 @@ public class TotalOrderPartitionerExample {
 
 	public static void main(String[] args) throws Exception {
 
-		// Parse CLI parameters
+		// Create job and parse CLI parameters
+		Job job = Job.getInstance(new Configuration(), "Total Order Sorting example");
+		job.setJarByClass(TotalOrderPartitionerExample.class);
+
 		Path inputPath = new Path(args[0]);
 		Path partitionOutputPath = new Path(args[1]);
 		Path outputPath = new Path(args[2]);
-		
-		Job job = Job.getInstance(new Configuration(), "Sampling States");
-		job.setJarByClass(TotalOrderPartitionerExample.class);
 
-	    // The following instructions need to be executed before writing the partition file
+		// The following instructions should be executed before writing the partition file
 		job.setNumReduceTasks(3);
-	    FileInputFormat.setInputPaths(job, inputPath);
-	    FileOutputFormat.setOutputPath(job, outputPath);
+		FileInputFormat.setInputPaths(job, inputPath);
 		TotalOrderPartitioner.setPartitionFile(job.getConfiguration(), partitionOutputPath);
 		job.setInputFormatClass(KeyValueTextInputFormat.class);
 		job.setMapOutputKeyClass(Text.class);
 		job.setMapOutputValueClass(Text.class);
-		
+
 		// Write partition file with random sampler
 		InputSampler.Sampler<Text, Text> sampler = new InputSampler.RandomSampler<>(0.01, 1000, 100);
 		InputSampler.writePartitionFile(job, sampler);
@@ -41,9 +40,10 @@ public class TotalOrderPartitionerExample {
 		job.setPartitionerClass(TotalOrderPartitioner.class);
 		job.setMapperClass(Mapper.class);
 		job.setReducerClass(Reducer.class);
-		
+
+		FileOutputFormat.setOutputPath(job, outputPath);
 		System.exit(job.waitForCompletion(true) ? 0 : 1);
-		
+
 	}
 
 }
