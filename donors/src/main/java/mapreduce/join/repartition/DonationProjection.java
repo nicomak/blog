@@ -16,7 +16,7 @@ import data.writable.DonationWritable;
  *
  */
 public class DonationProjection implements WritableComparable<DonationProjection> {
-	
+
 	public String donation_id;
 	public String project_id;
 	public String ddate;

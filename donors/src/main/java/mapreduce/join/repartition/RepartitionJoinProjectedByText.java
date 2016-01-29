@@ -22,7 +22,7 @@ import data.writable.DonationWritable;
 import data.writable.ProjectWritable;
 
 public class RepartitionJoinProjectedByText {
-		
+
 	public static final Log LOG = LogFactory.getLog(ReplicatedJoinBasic.class);
 
 	/**
@@ -38,12 +38,7 @@ public class RepartitionJoinProjectedByText {
 
 		@Override
 		public void map(Object key, DonationWritable donation, Context context) throws IOException, InterruptedException {
-			
-			// Ignore results where the total donation is less than 100$ 
-			if (donation.total < 100) {
-				return;
-			}
-			
+
 			outputKey.set(donation.project_id);
 			String donationOutput = String.format("D|%s|%s|%s|%s|%.2f", donation.donation_id, 
 					donation.project_id, donation.ddate, donation.donor_city, donation.total);
@@ -51,7 +46,7 @@ public class RepartitionJoinProjectedByText {
 			context.write(outputKey, outputValue);
 		}
 	}
-	
+
 	/**
 	 * Projects Mapper.
 	 * 
@@ -65,23 +60,17 @@ public class RepartitionJoinProjectedByText {
 
 		@Override
 		public void map(Object offset, ProjectWritable project, Context context) throws IOException, InterruptedException {
-			
-			// Ignore projects where the primary subject is not about science
-			String subject = (project.primary_focus_subject != null) ? project.primary_focus_subject.toLowerCase() : "";
-			if (!subject.contains("science")) {
-				return;
-			}
-			
+
 			outputKey.set(project.project_id);
 			// Create new object with projected values
 			String projectOutput = String.format("P|%s|%s|%s|%s", 
 					project.project_id, project.school_city, project.poverty_level, project.primary_focus_subject);
 			outputValue.set(projectOutput);
 			context.write(outputKey, outputValue);
-			
+
 		}
 	}
-	
+
 	/**
 	 * Join Reducer.
 	 * Each invocation of the reduce() method will receive a list of ObjectWritable.
@@ -92,42 +81,42 @@ public class RepartitionJoinProjectedByText {
 	 *
 	 */
 	public static class JoinReducer extends Reducer<Text, Text, Text, Text> {
-		
+
 		private Text donationOutput = new Text();
 		private Text projectOutput = new Text();
-		
+
 		private List<String> donationsList;
 		private List<String> projectsList;
-		
+
 		@Override
 		protected void reduce(Text projectId, Iterable<Text> values, Context context) throws IOException, InterruptedException {
 
 			// Clear data lists
 			donationsList = new ArrayList<>();
 			projectsList = new ArrayList<>();
-			
+
 			// Fill up data lists with selected fields
 			for (Text value : values) {
 				String textVal = value.toString();
-				
+
 				// Get first char which determines the type of data
 				char type = textVal.charAt(0);
-				
+
 				// Remove the type flag "P|" or "D|" from the beginning to get original data content
 				textVal = textVal.substring(2);
-				
+
 				if (type == 'D') {
 					donationsList.add(textVal);
-				
+
 				} else if (type == 'P') {
 					projectsList.add(textVal);
-					
+
 				} else {
 					String errorMsg = String.format("Type is neither a D nor P.");
 					throw new IOException(errorMsg);
 				}
 			}
-			
+
 			// Join data lists only if both sides exist (INNER JOIN)
 			if (!donationsList.isEmpty() && !projectsList.isEmpty()) {
 
@@ -140,16 +129,16 @@ public class RepartitionJoinProjectedByText {
 					}
 				}
 			}
-			
+
 		}		
 	}	
-	
+
 	public static void main(String[] args) throws Exception {
 
 		Configuration conf = new Configuration();
-		Job job = Job.getInstance(conf, "Repartition Join");
+		Job job = Job.getInstance(conf, "Repartition Join (projection by text)");
 		job.setJarByClass(ReplicatedJoinBasic.class);
-		
+
 		// Input parameters
 		Path donationsPath = new Path(args[0]);
 		Path projectsPath = new Path(args[1]);
@@ -160,14 +149,14 @@ public class RepartitionJoinProjectedByText {
 		MultipleInputs.addInputPath(job, projectsPath, SequenceFileInputFormat.class, ProjectsMapper.class);
 		job.setMapOutputKeyClass(Text.class);
 		job.setMapOutputValueClass(Text.class);
-		
+
 		// Reducer configuration
-		job.setNumReduceTasks(1);
+		job.setNumReduceTasks(3);
 		job.setReducerClass(JoinReducer.class);
-		
-	    FileOutputFormat.setOutputPath(job, outputPath);
-		
+
+		FileOutputFormat.setOutputPath(job, outputPath);
+
 		System.exit(job.waitForCompletion(true) ? 0 : 1);
-		
+
 	}
 }

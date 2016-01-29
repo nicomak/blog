@@ -16,7 +16,7 @@ import data.writable.ProjectWritable;
  *
  */
 public class ProjectProjection implements WritableComparable<ProjectWritable> {
-	
+
 	public String project_id;
 	public String school_city;
 	public String poverty_level;
@@ -37,7 +37,7 @@ public class ProjectProjection implements WritableComparable<ProjectWritable> {
 		WritableUtils.writeString(out, school_city);
 		WritableUtils.writeString(out, poverty_level);
 		WritableUtils.writeString(out, primary_focus_subject);
-		
+
 	}
 
 	@Override

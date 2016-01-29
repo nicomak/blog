@@ -23,7 +23,7 @@ import data.writable.DonationWritable;
 import data.writable.ProjectWritable;
 
 public class RepartitionJoinProjectedByWritables {
-		
+
 	public static final Log LOG = LogFactory.getLog(ReplicatedJoinBasic.class);
 
 	/**
@@ -39,19 +39,14 @@ public class RepartitionJoinProjectedByWritables {
 
 		@Override
 		public void map(Object key, DonationWritable donation, Context context) throws IOException, InterruptedException {
-			
-			// Ignore results where the total donation is less than 100$ 
-			if (donation.total < 100) {
-				return;
-			}
-			
+
 			outputKey.set(donation.project_id);
 			// Create new object with projected values
 			outputValue.set(DonationProjection.makeProjection(donation));
 			context.write(outputKey, outputValue);
 		}
 	}
-	
+
 	/**
 	 * Projects Mapper.
 	 * 
@@ -65,21 +60,15 @@ public class RepartitionJoinProjectedByWritables {
 
 		@Override
 		public void map(Object offset, ProjectWritable project, Context context) throws IOException, InterruptedException {
-			
-			// Ignore projects where the primary subject is not about science
-			String subject = (project.primary_focus_subject != null) ? project.primary_focus_subject.toLowerCase() : "";
-			if (!subject.contains("science")) {
-				return;
-			}
-			
+
 			outputKey.set(project.project_id);
 			// Create new object with projected values
 			outputValue.set(ProjectProjection.makeProjection(project));
 			context.write(outputKey, outputValue);
-			
+
 		}
 	}
-	
+
 	/**
 	 * Join Reducer.
 	 * Each invocation of the reduce() method will receive a list of ObjectWritable.
@@ -90,43 +79,43 @@ public class RepartitionJoinProjectedByWritables {
 	 *
 	 */
 	public static class JoinReducer extends Reducer<Text, ObjectWritable, Text, Text> {
-		
+
 		private Text donationOutput = new Text();
 		private Text projectOutput = new Text();
-		
+
 		private List<String> donationsList;
 		private List<String> projectsList;
-		
+
 		@Override
 		protected void reduce(Text projectId, Iterable<ObjectWritable> values, Context context) throws IOException, InterruptedException {
 
 			// Clear data lists
 			donationsList = new ArrayList<>();
 			projectsList = new ArrayList<>();
-			
+
 			// Fill up data lists with selected fields
 			for (ObjectWritable value : values) {
 				Object object = value.get();
-				
+
 				if (object instanceof DonationProjection) {
 					DonationProjection donation = (DonationProjection) object;
 					String donationOutput = String.format("%s|%s|%s|%s|%.2f", donation.donation_id, 
 							donation.project_id, donation.ddate, donation.donor_city, donation.total);
 					donationsList.add(donationOutput);
-				
+
 				} else if (object instanceof ProjectProjection) {
 					ProjectProjection project = (ProjectProjection) object;
 					String projectOutput = String.format("%s|%s|%s|%s", 
 							project.project_id, project.school_city, project.poverty_level, project.primary_focus_subject);
 					projectsList.add(projectOutput);
-					
+
 				} else {
 					String errorMsg = String.format("Object of class %s is neither a %s nor %s.", 
 							object.getClass().getName(), ProjectWritable.class.getName(), DonationWritable.class.getName());
 					throw new IOException(errorMsg);
 				}
 			}
-			
+
 			// Join data lists only if both sides exist (INNER JOIN)
 			if (!donationsList.isEmpty() && !projectsList.isEmpty()) {
 
@@ -139,17 +128,17 @@ public class RepartitionJoinProjectedByWritables {
 					}
 				}
 			}
-			
+
 		}		
 	}
-	
-	
+
+
 	public static void main(String[] args) throws Exception {
 
 		Configuration conf = new Configuration();
-		Job job = Job.getInstance(conf, "Repartition Join");
+		Job job = Job.getInstance(conf, "Repartition Join (projection by writables)");
 		job.setJarByClass(ReplicatedJoinBasic.class);
-		
+
 		// Input parameters
 		Path donationsPath = new Path(args[0]);
 		Path projectsPath = new Path(args[1]);
@@ -160,14 +149,14 @@ public class RepartitionJoinProjectedByWritables {
 		MultipleInputs.addInputPath(job, projectsPath, SequenceFileInputFormat.class, ProjectsMapper.class);
 		job.setMapOutputKeyClass(Text.class);
 		job.setMapOutputValueClass(ObjectWritable.class);
-		
+
 		// Reducer configuration
-		job.setNumReduceTasks(1);
+		job.setNumReduceTasks(3);
 		job.setReducerClass(JoinReducer.class);
-		
-	    FileOutputFormat.setOutputPath(job, outputPath);
-		
+
+		FileOutputFormat.setOutputPath(job, outputPath);
+
 		System.exit(job.waitForCompletion(true) ? 0 : 1);
-		
+
 	}
 }
