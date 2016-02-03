@@ -20,11 +20,11 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import data.writable.DonationWritable;
 import data.writable.ProjectWritable;
 
-public class ReplicatedJoinProjectedByWritable {
+public class ReplicatedJoinProjectedByObjects {
 
 	public static final String PROJECTS_FILENAME_CONF_KEY = "projects.filename";
 
-	public static final Log LOG = LogFactory.getLog(ReplicatedJoinProjectedByWritable.class);
+	public static final Log LOG = LogFactory.getLog(ReplicatedJoinProjectedByObjects.class);
 
 	/**
 	 * Mapper which does the joining.
@@ -132,7 +132,7 @@ public class ReplicatedJoinProjectedByWritable {
 
 		Configuration conf = new Configuration();
 		Job job = Job.getInstance(conf, "Replicated Join (with projection)");
-		job.setJarByClass(ReplicatedJoinProjectedByWritable.class);
+		job.setJarByClass(ReplicatedJoinProjectedByObjects.class);
 
 		// Input parameters
 		Path donationsPath = new Path(args[0]);
