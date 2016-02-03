@@ -1,5 +1,7 @@
-package mapreduce.join.replicated;
+package mapreduce.join.bloomfilter;
 
+import java.io.DataInputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.util.HashMap;
@@ -11,19 +13,22 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.util.bloom.BloomFilter;
+import org.apache.hadoop.util.bloom.Key;
 
 import data.writable.DonationWritable;
 import data.writable.ProjectWritable;
 
-public class ReplicatedJoinBasic {
+public class ReplicatedJoinScienceProjectsBloom {
 
-	public static final Log LOG = LogFactory.getLog(ReplicatedJoinBasic.class);
+	public static final String PROJECTS_FILENAME_CONF_KEY = "projects.filename";
+	public static final String PROJECTS_FILTER_FILE = "projects.bloomfilter.filename";
+	public static final Log LOG = LogFactory.getLog(ReplicatedJoinScienceProjectsBloom.class);
 
 	/**
 	 * Mapper which does the joining.
@@ -36,15 +41,35 @@ public class ReplicatedJoinBasic {
 	 */
 	public static class ReplicatedJoinMapper extends Mapper<Object, DonationWritable, Text, Text> {
 
-		public static final String PROJECTS_FILENAME_CONF_KEY = "projects.filename";
-
-		private Map<String, ProjectWritable> projectsCache = new HashMap<>();
-
+		private Map<String, String> projectsCache = new HashMap<>();
+		private BloomFilter filter = new BloomFilter();
 		private Text outputKey = new Text();
 		private Text outputValue = new Text();
 
 		@Override
 		public void setup(Context context) throws IOException, InterruptedException {
+
+			/************************
+		        Load bloom filter
+			 *************************/
+
+			String bloomFilterCacheFile = context.getConfiguration().get(PROJECTS_FILTER_FILE);
+			try (
+				FileInputStream fis = new FileInputStream(bloomFilterCacheFile);
+				DataInputStream dis = new DataInputStream(fis);
+			) 
+			{
+				filter.readFields(dis);
+
+			} catch (Exception e) {
+				throw new IOException("Error while reading bloom filter from file system.", e);
+			}
+			LOG.info("Finished to read filter with vector size : " + filter.getVectorSize());
+
+
+			/***********************
+			   Load projects cache
+			 ************************/
 
 			boolean cacheOK = false;
 
@@ -63,9 +88,20 @@ public class ReplicatedJoinBasic {
 						ProjectWritable tempValue = new ProjectWritable();
 
 						while (reader.next(tempKey, tempValue)) {
-							// Clone the writable otherwise all map values will be the same reference to tempValue
-							ProjectWritable project = WritableUtils.clone(tempValue, conf);
-							projectsCache.put(tempKey.toString(), project);
+
+							// The bloom filter returns true if the given project's subject is about Science, possibly with false positives
+							Key projectIdKey = new Key(tempValue.project_id.getBytes());
+							boolean possibilityOfScience = filter.membershipTest(projectIdKey);
+							if (!possibilityOfScience) {
+								return;
+							}
+
+							// Serialize important values to a string containing pipe-separated values
+							String projectString = String.format("%s|%s|%s|%s", tempValue.project_id, 
+									tempValue.school_city, tempValue.poverty_level, tempValue.primary_focus_subject);
+
+							// Add to cache
+							projectsCache.put(tempKey.toString(), projectString);
 						}
 					}
 					LOG.info("Finished to build cache. Number of entries : " + projectsCache.size());
@@ -85,18 +121,15 @@ public class ReplicatedJoinBasic {
 		public void map(Object key, DonationWritable donation, Context context)
 				throws IOException, InterruptedException {
 
-			ProjectWritable project = projectsCache.get(donation.project_id);
+			String projectOutput = projectsCache.get(donation.project_id);
 
 			// Ignore if the corresponding entry doesn't exist in the projects data (INNER JOIN)
-			if (project == null) {
+			if (projectOutput == null) {
 				return;
 			}
 
 			String donationOutput = String.format("%s|%s|%s|%s|%.2f", donation.donation_id, donation.project_id, 
 					donation.donor_city, donation.ddate, donation.total);
-
-			String projectOutput = String.format("%s|%s|%d|%s", 
-					project.project_id, project.school_city, project.poverty_level, project.primary_focus_subject);
 
 			outputKey.set(donationOutput);
 			outputValue.set(projectOutput);
@@ -104,21 +137,47 @@ public class ReplicatedJoinBasic {
 		}
 	}
 
+	/**
+	 * Smaller "Project" class used for projection.
+	 * 
+	 * @author Nicomak
+	 *
+	 */
+	public static class ProjectProjection {
+
+		public String project_id;
+		public String school_city;
+		public String poverty_level;
+		public String primary_focus_subject;
+
+		public ProjectProjection(ProjectWritable project) {
+			this.project_id = project.project_id;
+			this.school_city = project.school_city;
+			this.poverty_level = project.poverty_level;
+			this.primary_focus_subject = project.primary_focus_subject;
+		}
+	}
+
 
 	public static void main(String[] args) throws Exception {
 
 		Configuration conf = new Configuration();
-		Job job = Job.getInstance(conf, "Replication Join");
-		job.setJarByClass(ReplicatedJoinBasic.class);
+		Job job = Job.getInstance(conf, "Replicated Join (science projects with bloom filter)");
+		job.setJarByClass(ReplicatedJoinScienceProjectsBloom.class);
 
 		// Input parameters
 		Path donationsPath = new Path(args[0]);
 		Path projectsPath = new Path(args[1]);
-		Path outputPath = new Path(args[2]);
+		Path projectsBloomFilter = new Path(args[2]);
+		Path outputPath = new Path(args[3]);
 
-		// Create cache file and set path in configuration to be retrieved later by the mapper
+		// Add the projects sequence file to cached files
 		job.addCacheFile(projectsPath.toUri());
-		job.getConfiguration().set(ReplicatedJoinMapper.PROJECTS_FILENAME_CONF_KEY, projectsPath.getName());
+		job.getConfiguration().set(PROJECTS_FILENAME_CONF_KEY, projectsPath.getName());
+
+		// Add the bloom filter to cached files
+		job.addCacheFile(projectsBloomFilter.toUri());
+		job.getConfiguration().set(PROJECTS_FILTER_FILE, projectsBloomFilter.getName());
 
 		// Mapper configuration
 		job.setMapperClass(ReplicatedJoinMapper.class);

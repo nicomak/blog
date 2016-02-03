@@ -1,4 +1,4 @@
-package mapreduce.join.replicated;
+package mapreduce.join.bloomfilter;
 
 import java.io.IOException;
 import java.net.URI;
@@ -11,7 +11,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
@@ -21,9 +20,9 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import data.writable.DonationWritable;
 import data.writable.ProjectWritable;
 
-public class ReplicatedJoinBasic {
+public class ReplicatedJoinScienceProjects {
 
-	public static final Log LOG = LogFactory.getLog(ReplicatedJoinBasic.class);
+	public static final Log LOG = LogFactory.getLog(ReplicatedJoinScienceProjects.class);
 
 	/**
 	 * Mapper which does the joining.
@@ -38,7 +37,7 @@ public class ReplicatedJoinBasic {
 
 		public static final String PROJECTS_FILENAME_CONF_KEY = "projects.filename";
 
-		private Map<String, ProjectWritable> projectsCache = new HashMap<>();
+		private Map<String, String> projectsCache = new HashMap<>();
 
 		private Text outputKey = new Text();
 		private Text outputValue = new Text();
@@ -63,9 +62,19 @@ public class ReplicatedJoinBasic {
 						ProjectWritable tempValue = new ProjectWritable();
 
 						while (reader.next(tempKey, tempValue)) {
-							// Clone the writable otherwise all map values will be the same reference to tempValue
-							ProjectWritable project = WritableUtils.clone(tempValue, conf);
-							projectsCache.put(tempKey.toString(), project);
+
+							// Filter out projects if they are not about science
+							String subject = (tempValue.primary_focus_subject != null) ? tempValue.primary_focus_subject.toLowerCase() : "";
+							if (!subject.contains("science")) {
+								continue;
+							}
+
+							// Serialize important values to a string containing pipe-separated values
+							String projectString = String.format("%s|%s|%s|%s", tempValue.project_id, 
+									tempValue.school_city, tempValue.poverty_level, tempValue.primary_focus_subject);
+
+							// Add to cache
+							projectsCache.put(tempKey.toString(), projectString);
 						}
 					}
 					LOG.info("Finished to build cache. Number of entries : " + projectsCache.size());
@@ -85,18 +94,15 @@ public class ReplicatedJoinBasic {
 		public void map(Object key, DonationWritable donation, Context context)
 				throws IOException, InterruptedException {
 
-			ProjectWritable project = projectsCache.get(donation.project_id);
+			String projectOutput = projectsCache.get(donation.project_id);
 
 			// Ignore if the corresponding entry doesn't exist in the projects data (INNER JOIN)
-			if (project == null) {
+			if (projectOutput == null) {
 				return;
 			}
 
 			String donationOutput = String.format("%s|%s|%s|%s|%.2f", donation.donation_id, donation.project_id, 
 					donation.donor_city, donation.ddate, donation.total);
-
-			String projectOutput = String.format("%s|%s|%d|%s", 
-					project.project_id, project.school_city, project.poverty_level, project.primary_focus_subject);
 
 			outputKey.set(donationOutput);
 			outputValue.set(projectOutput);
@@ -108,8 +114,8 @@ public class ReplicatedJoinBasic {
 	public static void main(String[] args) throws Exception {
 
 		Configuration conf = new Configuration();
-		Job job = Job.getInstance(conf, "Replication Join");
-		job.setJarByClass(ReplicatedJoinBasic.class);
+		Job job = Job.getInstance(conf, "Replicated Join (science projects only)");
+		job.setJarByClass(ReplicatedJoinScienceProjects.class);
 
 		// Input parameters
 		Path donationsPath = new Path(args[0]);
