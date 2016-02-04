@@ -131,7 +131,7 @@ public class ReplicatedJoinProjectedByObjects {
 	public static void main(String[] args) throws Exception {
 
 		Configuration conf = new Configuration();
-		Job job = Job.getInstance(conf, "Replicated Join (with projection)");
+		Job job = Job.getInstance(conf, "Replicated Join (projection by objects)");
 		job.setJarByClass(ReplicatedJoinProjectedByObjects.class);
 
 		// Input parameters

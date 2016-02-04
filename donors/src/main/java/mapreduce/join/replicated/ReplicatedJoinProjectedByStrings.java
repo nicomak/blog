@@ -105,7 +105,7 @@ public class ReplicatedJoinProjectedByStrings {
 	public static void main(String[] args) throws Exception {
 
 		Configuration conf = new Configuration();
-		Job job = Job.getInstance(conf, "Replication Join");
+		Job job = Job.getInstance(conf, "Replicated Join (projection by strings)");
 		job.setJarByClass(ReplicatedJoinProjectedByStrings.class);
 
 		// Input parameters
