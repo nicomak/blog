@@ -93,7 +93,7 @@ public class ReplicatedJoinScienceProjectsBloom {
 							Key projectIdKey = new Key(tempValue.project_id.getBytes());
 							boolean possibilityOfScience = filter.membershipTest(projectIdKey);
 							if (!possibilityOfScience) {
-								return;
+								continue;
 							}
 
 							// Serialize important values to a string containing pipe-separated values
@@ -104,6 +104,7 @@ public class ReplicatedJoinScienceProjectsBloom {
 							projectsCache.put(tempKey.toString(), projectString);
 						}
 					}
+					
 					LOG.info("Finished to build cache. Number of entries : " + projectsCache.size());
 
 					cacheOK = true;
