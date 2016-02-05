@@ -104,7 +104,7 @@ public class ProjectBloomFilter {
 	public static void main(String[] args) throws Exception {
 
 		Configuration conf = new Configuration();
-		Job job = Job.getInstance(conf, "Donation BloomFilter Creation");
+		Job job = Job.getInstance(conf, "Projects BloomFilter Creation");
 		job.setJarByClass(ProjectBloomFilter.class);
 
 		// Input parameters

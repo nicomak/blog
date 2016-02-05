@@ -30,8 +30,6 @@ public class ProjectFilterTest {
 	 */
 	public static class TestProjectBloomFilterMapper extends Mapper<Object, ProjectWritable, Text, Text> {
 		
-		public static final String DONATION_FILTER_FILE = "bloomfilter.donationamount.filename";
-		
 		private BloomFilter filter = new BloomFilter();
 		
 		private static final Text FP_KEY = new Text("FALSE_POSITIVE");
@@ -41,7 +39,7 @@ public class ProjectFilterTest {
 		
 		@Override
 		public void setup(Context context) throws IOException, InterruptedException {
-			String bloomFilterCacheFile = context.getConfiguration().get(DONATION_FILTER_FILE);
+			String bloomFilterCacheFile = context.getConfiguration().get(PROJECTS_FILTER_FILE);
 			
 			try (
 				FileInputStream fis = new FileInputStream(bloomFilterCacheFile);
@@ -83,17 +81,17 @@ public class ProjectFilterTest {
 	public static void main(String[] args) throws Exception {
 
 		Configuration conf = new Configuration();
-		Job job = Job.getInstance(conf, "Donation BloomFilter Test");
+		Job job = Job.getInstance(conf, "Projects BloomFilter Test");
 		job.setJarByClass(ProjectFilterTest.class);
 		
 		// Input parameters
-		Path donationsPath = new Path(args[0]);
-		Path donationsBloomFilter = new Path(args[1]);
+		Path datasetPath = new Path(args[0]);
+		Path bloomFilterPath = new Path(args[1]);
 		Path outputPath = new Path(args[2]);
 		
 		// Create cache file and set path in configuration to be retrieved later by the mapper
-	    job.addCacheFile(donationsBloomFilter.toUri());
-	    job.getConfiguration().set(PROJECTS_FILTER_FILE, donationsBloomFilter.getName());
+	    job.addCacheFile(bloomFilterPath.toUri());
+	    job.getConfiguration().set(PROJECTS_FILTER_FILE, bloomFilterPath.getName());
 
 		// Mapper configuration
 		job.setMapperClass(TestProjectBloomFilterMapper.class);
@@ -104,7 +102,7 @@ public class ProjectFilterTest {
 		// Reducer configuration
 		job.setNumReduceTasks(0);
 
-		FileInputFormat.setInputPaths(job, donationsPath);
+		FileInputFormat.setInputPaths(job, datasetPath);
 		FileOutputFormat.setOutputPath(job, outputPath);
 		
 		System.exit(job.waitForCompletion(true) ? 0 : 1);
