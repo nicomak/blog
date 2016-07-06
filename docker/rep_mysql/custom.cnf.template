@@ -1,0 +1,6 @@
+[mysqld]
+server-id = $SERVER_ID
+bind-address = $BIND_ADDRESS
+log_bin = /var/log/mysql/mysql-bin.log
+relay-log = /var/log/mysql/mysql-relay-bin.log
+binlog_do_db = $MYSQL_DATABASE
