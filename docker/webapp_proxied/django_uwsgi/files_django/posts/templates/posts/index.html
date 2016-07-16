@@ -1,0 +1,14 @@
+{% extends "posts/base.html" %}
+{% load staticfiles %}
+
+{% block content %}
+
+<h1>Welcome to the Posts application.</h1>
+<p>Choose an action:</p>
+<ul>
+    <li><a href="{% url 'posts_list' %}">View the list of posts</a></li>
+    <li><a href="{% url 'posts_create' %}">Create a new post</a></li>
+</ul>
+
+{% endblock content%}
+

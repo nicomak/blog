@@ -1,0 +1,4 @@
+# Remove all dynamic contents created by the app
+**/*.pyc
+django_uwsgi/files_django/db.sqlite3
+django_uwsgi/files_django/static_root
