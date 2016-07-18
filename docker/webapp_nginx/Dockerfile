@@ -1,15 +1,16 @@
-FROM debian:jessie
+FROM nginx:1.11
 
 # Install all debian packages
 RUN apt-get update && apt-get install -y \
-		vim net-tools \
-		nginx \
+	vim \
+	net-tools \
 	--no-install-recommends && rm -rf /var/lib/apt/lists/*
 
 # Copy all source files to the container's working directory
-COPY ./nginx.conf /etc/nginx/
+COPY . /app/
+WORKDIR /app/
 
-# Exposed port
-EXPOSE 80
-
-CMD service nginx start
+# Use the configuration script as the entrypoint
+COPY entrypoint.sh /usr/local/bin/
+ENTRYPOINT ["entrypoint.sh"]
+CMD ["nginx", "-g", "daemon off;"]

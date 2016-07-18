@@ -21,14 +21,18 @@ WORKDIR /app/
 # Create the log directory for uwsgi and the shared directory for static files
 RUN mkdir /var/log/uwsgi /shared
 
+# Forward uwsgi logs to the docker log collector
+RUN ln -sf /dev/stdout /var/log/uwsgi/djangoapp.log \
+	&& ln -sf /dev/stdout /var/log/uwsgi/emperor.log
+
 # Collect django static files and then copy them to the shared volume directory
 RUN python files_django/manage.py collectstatic --noinput &&\
 	cp -r files_django/static_root /shared/
 
 VOLUME /shared
 
-# Exposed port for communication with NGINX
+# Port to use with TCP proxy
 EXPOSE 29000
 
 # Start uWSGI on container startup
-CMD /usr/local/bin/uwsgi --emperor files_uwsgi/sites --gid www-data --logto /var/log/uwsgi/emperor.log
+CMD /usr/local/bin/uwsgi --emperor files_uwsgi --gid www-data --logto /var/log/uwsgi/emperor.log
