@@ -1,5 +1,5 @@
 # Remove all dynamic contents created by the app
 **/*.sock
 **/*.pyc
-**/files_django/db.sqlite3
-**/files_django/static_root
+files_django/db.sqlite3
+files_django/static_root

@@ -1,0 +1,9 @@
+# Core Libs
+uwsgi == 2.0.12
+django == 1.9.2
+
+# Drivers 
+psycopg2 == 2.6.1
+mysqlclient == 1.3.7
+cassandra-driver == 3.1.1
+
